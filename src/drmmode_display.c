@@ -1561,8 +1561,9 @@ static Bool resize_scanout_bo(ScrnInfoPtr pScrn, int width, int height)
 			/* use new scanout buffer */
 			set_scanout_bo(pScrn, new_scanout);
 			armsoc_bo_unreference(new_scanout); /* Screen has now taken ref on new_scanout so resize_scanout_bo drops it */
-
-			ARMSOCDRI2ResizeSwapChain(pScrn, old_scanout, new_scanout);
+            if (pARMSOC->dri) {
+			    ARMSOCDRI2ResizeSwapChain(pScrn, old_scanout, new_scanout);
+            }
 		}
 		pScrn->displayWidth = pitch / ((pScrn->bitsPerPixel + 7) / 8);
 	} else
