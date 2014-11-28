@@ -1318,14 +1318,17 @@ static Bool
 ARMSOCEnterVT(VT_FUNC_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
+    struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 	int i, ret;
 
 	TRACE_ENTER();
 
-	for (i = 1; i < currentMaxClients; i++) {
-		if (clients[i])
-			AttendClient(clients[i]);
-	}
+    if (pARMSOC->dri) {
+	    for (i = 1; i < currentMaxClients; i++) {
+		    if (clients[i])
+			    AttendClient(clients[i]);
+	    }
+    }
 
 	ret = ARMSOCSetDRMMaster();
 	if (ret) {
@@ -1353,14 +1356,16 @@ static void
 ARMSOCLeaveVT(VT_FUNC_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
+    struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 	int i, ret;
 
 	TRACE_ENTER();
-
-	for (i = 1; i < currentMaxClients; i++) {
-		if (clients[i])
-			IgnoreClient(clients[i]);
-	}
+    if (pARMSOC->dri) {
+	    for (i = 1; i < currentMaxClients; i++) {
+		    if (clients[i])
+			    IgnoreClient(clients[i]);
+	    }
+    }
 
 	ret = ARMSOCDropDRMMaster();
 	if (ret)
