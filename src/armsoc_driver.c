@@ -27,6 +27,10 @@
  *    Rob Clark <rob@ti.com>
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -36,10 +40,6 @@
 #include <sys/mman.h>
 
 #include <pixman.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include "armsoc_driver.h"
 
@@ -108,6 +108,7 @@ enum {
 	OPTION_DRIVERNAME,
 	OPTION_DRI_NUM_BUF,
 	OPTION_INIT_FROM_FBDEV,
+	OPTION_UMP_LOCK,
 };
 
 /** Supported options. */
@@ -119,6 +120,7 @@ static const OptionInfoRec ARMSOCOptions[] = {
 	{ OPTION_DRIVERNAME, "DriverName", OPTV_STRING,  {0}, FALSE },
 	{ OPTION_DRI_NUM_BUF, "DRI2MaxBuffers", OPTV_INTEGER, {-1}, FALSE },
 	{ OPTION_INIT_FROM_FBDEV, "InitFromFBDev", OPTV_STRING, {0}, FALSE },
+	{ OPTION_UMP_LOCK,   "UMP_LOCK",   OPTV_BOOLEAN, {0}, FALSE },
 	{ -1,                NULL,         OPTV_NONE,    {0}, FALSE }
 };
 
@@ -856,6 +858,10 @@ ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 			OPTION_NO_FLIP, FALSE);
 	INFO_MSG("Buffer Flipping is %s",
 				pARMSOC->NoFlip ? "Disabled" : "Enabled");
+	pARMSOC->useUmplock = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
+			OPTION_UMP_LOCK, FALSE);
+	INFO_MSG("umplock is %s",
+				pARMSOC->useUmplock ? "Disabled" : "Enabled");
 
 	/*
 	 * Select the video modes:
@@ -1127,6 +1133,15 @@ ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	wrap(pARMSOC, pScreen, BlockHandler, ARMSOCBlockHandler);
 	drmmode_screen_init(pScrn);
 
+	if (pARMSOC->useUmplock) {
+		pARMSOC->lockFD = open("/dev/umplock", O_RDWR);
+
+		if (-1 == pARMSOC->lockFD)
+			ERROR_MSG("Failed to open umplock device!");
+	} else {
+		pARMSOC->lockFD = -1;
+	}
+
 	TRACE_EXIT();
 	return TRUE;
 
@@ -1241,6 +1256,11 @@ ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 
 	pScrn->vtSema = FALSE;
 
+	if (-1 != pARMSOC->lockFD) {
+		close(pARMSOC->lockFD);
+		pARMSOC->lockFD = -1;
+	}
+
 	TRACE_EXIT();
 
 	return ret;
@@ -1325,7 +1345,7 @@ ARMSOCEnterVT(VT_FUNC_ARGS_DECL)
 
     if (pARMSOC->dri) {
 	    for (i = 1; i < currentMaxClients; i++) {
-		    if (clients[i])
+		    if (clients[i] && !clients[i]->clentGone)
 			    AttendClient(clients[i]);
 	    }
     }
@@ -1362,7 +1382,7 @@ ARMSOCLeaveVT(VT_FUNC_ARGS_DECL)
 	TRACE_ENTER();
     if (pARMSOC->dri) {
 	    for (i = 1; i < currentMaxClients; i++) {
-		    if (clients[i])
+		    if (clients[i] && !clients[i]->clientGone)
 			    IgnoreClient(clients[i]);
 	    }
     }
