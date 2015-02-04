@@ -1345,7 +1345,7 @@ ARMSOCEnterVT(VT_FUNC_ARGS_DECL)
 
     if (pARMSOC->dri) {
 	    for (i = 1; i < currentMaxClients; i++) {
-		    if (clients[i] && !clients[i]->clentGone)
+		    if (clients[i] && !clients[i]->clientGone)
 			    AttendClient(clients[i]);
 	    }
     }
