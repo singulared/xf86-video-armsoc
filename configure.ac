@@ -24,7 +24,7 @@
 
 AC_PREREQ(2.60)
 AC_INIT([xf86-video-armsoc],
-        [1.1.0],
+        [1.3.1],
         [],
         [xf86-video-armsoc])
 AC_CONFIG_SRCDIR([Makefile.am])
@@ -58,15 +58,6 @@ AC_ARG_WITH(xorg-module-dir,
             [moduledir="$withval"],
             [moduledir="$libdir/xorg/modules"])
 
-AC_MSG_CHECKING([which DRM driver to use])
-AC_ARG_WITH(drmmode,
-            AS_HELP_STRING([--with-drmmode],
-                           [Which DRM driver to use (see README)]),
-            [drmmode=$withval],
-            AC_MSG_FAILURE([You must specify which DRM driver to build for - see README]))
-AC_MSG_RESULT([$drmmode])
-AC_SUBST(drmmode)
-
 # Checks for extensions
 XORG_DRIVER_CHECK_EXT(RANDR, randrproto)
 XORG_DRIVER_CHECK_EXT(RENDER, renderproto)
@@ -81,6 +72,11 @@ PKG_CHECK_MODULES(XORG,
                   dri2proto
                   pixman-1
                   $REQUIRED_MODULES)
+
+PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
+	HAVE_XEXTPROTO_71="yes"; AC_DEFINE(HAVE_XEXTPROTO_71, 1, [xextproto 7.1 available]),
+	HAVE_XEXTPROTO_71="no")
+AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes"])
 
 # Checks for header files.
 AC_HEADER_STDC
